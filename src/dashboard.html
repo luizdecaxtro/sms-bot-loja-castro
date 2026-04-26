@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loja de Castro — SMS Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0E0F0C;
+    --surface:   #171813;
+    --card:      #1E1F1A;
+    --border:    #2C2E27;
+    --accent:    #C8F060;
+    --accent2:   #F0C860;
+    --accent3:   #60C8F0;
+    --text:      #E8E9E2;
+    --muted:     #7A7D70;
+    --danger:    #F06060;
+    --radius:    10px;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --font-body: 'Lora', serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+  }
+
+  aside {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 28px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .logo { padding: 0 20px 28px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .logo-mark { font-family: var(--font-head); font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); display: block; }
+  .logo-sub { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+
+  nav a { display: flex; align-items: center; gap: 10px; padding: 10px 20px; font-family: var(--font-head); font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; transition: all .15s; border-left: 2px solid transparent; }
+  nav a:hover { color: var(--text); background: var(--card); }
+  nav a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(200,240,96,.06); }
+  nav a .icon { font-size: 15px; width: 18px; text-align: center; }
+
+  .sidebar-bottom { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--border); }
+  .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 6px; animation: pulse 2s infinite; }
+  .status-dot.offline { background: var(--danger); animation: none; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .status-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+  main { padding: 32px 36px; overflow-y: auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .page-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; }
+  h1 { font-family: var(--font-head); font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+  h1 span { color: var(--accent); }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 4px; font-family: var(--font-mono); }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+  .stat-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+  .stat-value { font-family: var(--font-head); font-size: 30px; font-weight: 800; margin: 6px 0 2px; }
+  .stat-value.green { color: var(--accent); }
+  .stat-value.yellow { color: var(--accent2); }
+  .stat-value.blue { color: var(--accent3); }
+  .stat-sub { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+
+  .btn { font-family: var(--font-head); font-weight: 700; font-size: 12px; letter-spacing: .05em; padding: 9px 18px; border-radius: 6px; border: none; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; text-transform: uppercase; }
+  .btn-primary { background: var(--accent); color: #0E0F0C; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+  .btn-danger { background: rgba(240,96,96,.15); color: var(--danger); border: 1px solid rgba(240,96,96,.3); }
+  .btn-send { background: rgba(96,200,240,.15); color: var(--accent3); border: 1px solid rgba(96,200,240,.3); }
+  .btn-send:hover { background: rgba(96,200,240,.25); }
+  .btn-sm { padding: 5px 10px; font-size: 10px; }
+
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); background: var(--surface); }
+  td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+
+  .badge { font-family: var(--font-mono); font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
+  .badge-green  { background: rgba(200,240,96,.15); color: var(--accent); }
+  .badge-yellow { background: rgba(240,200,96,.15); color: var(--accent2); }
+  .badge-blue   { background: rgba(96,200,240,.15); color: var(--accent3); }
+  .badge-red    { background: rgba(240,96,96,.15);  color: var(--danger); }
+  .badge-gray   { background: rgba(122,125,112,.15); color: var(--muted); }
+
+  .gen-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
+  .gen-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 10px; display: block; }
+  .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+  .cat-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; cursor: pointer; transition: all .15s; text-align: left; }
+  .cat-btn:hover { border-color: var(--muted); }
+  .cat-btn.selected { border-color: var(--accent); background: rgba(200,240,96,.08); }
+  .cat-btn .cat-emoji { font-size: 20px; display: block; margin-bottom: 6px; }
+  .cat-btn .cat-name { font-family: var(--font-head); font-size: 12px; font-weight: 700; color: var(--text); }
+  .cat-btn .cat-slug { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+
+  .post-preview { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; min-height: 80px; color: var(--text); white-space: pre-wrap; display: none; }
+  .post-preview.visible { display: block; }
+  .char-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .char-count.warn { color: var(--accent2); }
+  .char-count.over { color: var(--danger); }
+
+  .loading-bar { height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 16px 0; display: none; }
+  .loading-bar.visible { display: block; }
+  .loading-bar-inner { height: 100%; width: 30%; background: var(--accent); border-radius: 2px; animation: slide 1.2s ease-in-out infinite; }
+  @keyframes slide { 0%{transform:translateX(-100%)} 100%{transform:translateX(430%)} }
+
+  .input-field { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-family: var(--font-mono); font-size: 12px; color: var(--text); outline: none; transition: border-color .15s; }
+  .input-field:focus { border-color: var(--accent); }
+  .input-field::placeholder { color: var(--muted); }
+
+  .contacts-header { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
+
+  .campaign-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 10px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; }
+  .campaign-title { font-family: var(--font-head); font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .campaign-meta { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+  .campaign-stats { display: flex; gap: 20px; }
+  .camp-stat { text-align: center; }
+  .camp-stat-val { font-family: var(--font-head); font-weight: 800; font-size: 20px; }
+  .camp-stat-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; color: var(--muted); }
+
+  .section-title { font-family: var(--font-head); font-weight: 700; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; margin-top: 24px; }
+
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); font-family: var(--font-mono); font-size: 13px; }
+  .empty-state .emoji { font-size: 32px; display: block; margin-bottom: 12px; }
+
+  .alert { border-radius: var(--radius); padding: 12px 16px; font-size: 13px; margin-bottom: 16px; font-family: var(--font-mono); display: none; }
+  .alert.visible { display: block; }
+  .alert-success { background: rgba(200,240,96,.1); border: 1px solid rgba(200,240,96,.3); color: var(--accent); }
+  .alert-error { background: rgba(240,96,96,.1); border: 1px solid rgba(240,96,96,.3); color: var(--danger); }
+
+  #toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 18px; font-family: var(--font-mono); font-size: 12px; color: var(--text); transform: translateY(80px); opacity: 0; transition: all .3s; z-index: 100; max-width: 300px; }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-left: 3px solid var(--accent); }
+  #toast.error { border-left: 3px solid var(--danger); }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-top-color: currentColor; border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 200; }
+  .modal-overlay.visible { display: flex; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; width: 440px; max-width: 90vw; }
+  .modal-title { font-family: var(--font-head); font-weight: 700; font-size: 18px; margin-bottom: 20px; }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label { display: block; font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .06em; }
+  .modal-field .input-field { width: 100%; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+  .api-config { background: rgba(240,200,96,.08); border: 1px solid rgba(240,200,96,.3); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 20px; }
+  .api-config p { font-family: var(--font-mono); font-size: 12px; color: var(--accent2); margin-bottom: 8px; }
+  .api-config .input-row { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="logo">
+    <span class="logo-mark">Loja de Castro</span>
+    <span class="logo-sub">SMS Bot · Painel</span>
+  </div>
+  <nav>
+    <a href="#" class="active" onclick="showPage('dashboard', this)"><span class="icon">◈</span> Dashboard</a>
+    <a href="#" onclick="showPage('generate', this)"><span class="icon">✦</span> Gerar Post</a>
+    <a href="#" onclick="showPage('contacts', this)"><span class="icon">◎</span> Contatos</a>
+    <a href="#" onclick="showPage('campaigns', this)"><span class="icon">◷</span> Campanhas</a>
+  </nav>
+  <div class="sidebar-bottom">
+    <span class="status-dot" id="status-dot"></span>
+    <span class="status-label" id="status-label">Verificando...</span>
+  </div>
+</aside>
+
+<main>
+
+  <!-- CONFIGURAÇÃO DA API -->
+  <div class="api-config" id="api-config-box">
+    <p>⚠️ Configure o endereço do servidor para conectar ao backend:</p>
+    <div class="input-row">
+      <input class="input-field" id="api-url-input" placeholder="http://localhost:3000" style="flex:1" value="http://localhost:3000">
+      <button class="btn btn-primary" onclick="saveApiUrl()">Conectar</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="page active">
+    <div class="page-header">
+      <div>
+        <h1>Dashboard <span>↗</span></h1>
+        <div class="page-sub">Visão geral das campanhas WhatsApp</div>
+      </div>
+      <button class="btn btn-primary" onclick="quickSend()">🚀 Enviar agora</button>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Contatos ativos</div>
+        <div class="stat-value green" id="dash-contacts">—</div>
+        <div class="stat-sub">Banco Supabase</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Posts gerados</div>
+        <div class="stat-value yellow" id="dash-posts">—</div>
+        <div class="stat-sub">Histórico total</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Campanhas</div>
+        <div class="stat-value blue" id="dash-campaigns">—</div>
+        <div class="stat-sub">Total enviadas</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Próximo envio</div>
+        <div class="stat-value green" style="font-size:18px;margin-top:10px">Seg/Qua/Sex</div>
+        <div class="stat-sub">Às 9h automático</div>
+      </div>
+    </div>
+    <div class="section-title">Últimos posts gerados</div>
+    <div id="dash-posts-list">
+      <div class="empty-state"><span class="emoji">📭</span>Carregando posts...</div>
+    </div>
+  </div>
+
+  <!-- GERAR POST -->
+  <div id="page-generate" class="page">
+    <div class="page-header">
+      <div>
+        <h1>Gerar <span>Post</span></h1>
+        <div class="page-sub">IA analisa o site e cria o WhatsApp ideal por categoria</div>
+      </div>
+    </div>
+    <div class="gen-panel">
+      <span class="gen-label">1 — Escolha a categoria</span>
+      <div class="cat-grid" id="cat-grid">
+        <div class="cat-btn selected" onclick="selectCat(this,'')">
+          <span class="cat-emoji">🤖</span>
+          <div class="cat-name">Automático</div>
+          <div class="cat-slug">IA escolhe</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary" id="btn-gen" onclick="generatePost()">✦ Gerar com IA</button>
+        <button class="btn btn-ghost" onclick="clearPost()">Limpar</button>
+      </div>
+      <div class="loading-bar" id="loading-bar"><div class="loading-bar-inner"></div></div>
+      <span class="gen-label">2 — Post gerado</span>
+      <div class="post-preview" id="post-preview"></div>
+      <div class="char-count" id="char-count"></div>
+    </div>
+    <div id="post-actions" style="display:none;gap:10px">
+      <button class="btn btn-send" id="btn-send-post" onclick="sendGeneratedPost()">📱 Enviar para todos via WhatsApp</button>
+      <button class="btn btn-ghost" onclick="generatePost()">↺ Regenerar</button>
+    </div>
+  </div>
+
+  <!-- CONTATOS -->
+  <div id="page-contacts" class="page">
+    <div class="page-header">
+      <div>
+        <h1>Con<span>tatos</span></h1>
+        <div class="page-sub">Gerenciados no Supabase · tabela contacts</div>
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">+ Adicionar contato</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Telefone</th>
+            <th>Status</th>
+            <th>Origem</th>
+            <th>Criado em</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="contacts-tbody">
+          <tr><td colspan="6"><div class="empty-state"><span class="emoji">⏳</span>Carregando contatos...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:8px" id="contacts-count"></div>
+  </div>
+
+  <!-- CAMPANHAS -->
+  <div id="page-campaigns" class="page">
+    <div class="page-header">
+      <div>
+        <h1>Cam<span>panhas</span></h1>
+        <div class="page-sub">Histórico completo de envios</div>
+      </div>
+    </div>
+    <div id="campaigns-list">
+      <div class="empty-state"><span class="emoji">⏳</span>Carregando campanhas...</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL ADICIONAR CONTATO -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">Adicionar contato</div>
+    <div class="modal-field">
+      <label>Nome completo</label>
+      <input class="input-field" id="modal-name" placeholder="Ex: João Silva">
+    </div>
+    <div class="modal-field">
+      <label>Telefone (com código do país)</label>
+      <input class="input-field" id="modal-phone" placeholder="Ex: +5598999999999">
+    </div>
+    <div class="modal-field">
+      <label>Origem</label>
+      <select class="input-field" id="modal-source">
+        <option value="manual">Manual</option>
+        <option value="site">Site</option>
+        <option value="evento">Evento</option>
+        <option value="indicacao">Indicação</option>
+      </select>
+    </div>
+    <div id="modal-alert" class="alert"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveContact()">Salvar contato</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIGURAÇÃO ─────────────────────────────────────────────
+let API = localStorage.getItem('api_url') || 'http://localhost:3000'
+let currentPostId = null
+let selectedCat = ''
+
+document.getElementById('api-url-input').value = API
+
+function saveApiUrl() {
+  API = document.getElementById('api-url-input').value.trim().replace(/\/$/, '')
+  localStorage.setItem('api_url', API)
+  checkServer()
+  toast('Conectando ao servidor...', 'success')
+}
+
+// ── VERIFICAR SERVIDOR ───────────────────────────────────────
+async function checkServer() {
+  const dot = document.getElementById('status-dot')
+  const label = document.getElementById('status-label')
+  try {
+    const r = await fetch(`${API}/health`, { signal: AbortSignal.timeout(3000) })
+    if (r.ok) {
+      dot.className = 'status-dot'
+      label.textContent = 'Bot ativo · online'
+      document.getElementById('api-config-box').style.display = 'none'
+      loadDashboard()
+      loadCategories()
+    } else { throw new Error() }
+  } catch {
+    dot.className = 'status-dot offline'
+    label.textContent = 'Servidor offline'
+  }
+}
+
+// ── NAVEGAÇÃO ────────────────────────────────────────────────
+function showPage(name, link) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'))
+  document.getElementById('page-' + name).classList.add('active')
+  if (link) link.classList.add('active')
+  if (name === 'contacts') loadContacts()
+  if (name === 'campaigns') loadCampaigns()
+  if (name === 'dashboard') loadDashboard()
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const [contacts, posts, campaigns] = await Promise.all([
+      fetch(`${API}/contacts`).then(r => r.json()),
+      fetch(`${API}/posts`).then(r => r.json()),
+      fetch(`${API}/campaigns`).then(r => r.json())
+    ])
+
+    document.getElementById('dash-contacts').textContent = contacts.total || 0
+    document.getElementById('dash-posts').textContent = posts.length || 0
+    document.getElementById('dash-campaigns').textContent = campaigns.length || 0
+
+    const list = document.getElementById('dash-posts-list')
+    if (!posts.length) {
+      list.innerHTML = '<div class="empty-state"><span class="emoji">📭</span>Nenhum post gerado ainda</div>'
+      return
+    }
+
+    list.innerHTML = posts.slice(0, 5).map(p => `
+      <div class="campaign-card">
+        <div>
+          <div class="campaign-title">${p.categories?.emoji || '📝'} ${p.source_title || 'Post'}</div>
+          <div class="campaign-meta">${p.categories?.label || ''} · ${formatDate(p.created_at)} · <span class="badge ${statusBadge(p.status)}">${p.status}</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;font-family:var(--font-mono)">${p.content?.slice(0,80)}...</div>
+        </div>
+        ${p.status === 'draft' ? `<button class="btn btn-send btn-sm" onclick="sendPost('${p.id}')">Enviar</button>` : ''}
+      </div>
+    `).join('')
+  } catch(e) {
+    console.error(e)
+  }
+}
+
+// ── CATEGORIAS ───────────────────────────────────────────────
+async function loadCategories() {
+  try {
+    const cats = await fetch(`${API}/categories`).then(r => r.json())
+    const grid = document.getElementById('cat-grid')
+    grid.innerHTML = `
+      <div class="cat-btn selected" onclick="selectCat(this,'')">
+        <span class="cat-emoji">🤖</span>
+        <div class="cat-name">Automático</div>
+        <div class="cat-slug">IA escolhe</div>
+      </div>
+    ` + cats.map(c => `
+      <div class="cat-btn" onclick="selectCat(this,'${c.slug}')">
+        <span class="cat-emoji">${c.emoji}</span>
+        <div class="cat-name">${c.label}</div>
+        <div class="cat-slug">${c.slug}</div>
+      </div>
+    `).join('')
+  } catch(e) {}
+}
+
+// ── GERADOR ─────────────────────────────────────────────────
+function selectCat(el, slug) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'))
+  el.classList.add('selected')
+  selectedCat = slug
+}
+
+async function generatePost() {
+  const btn = document.getElementById('btn-gen')
+  const bar = document.getElementById('loading-bar')
+  const prev = document.getElementById('post-preview')
+  const acts = document.getElementById('post-actions')
+  const cc = document.getElementById('char-count')
+
+  btn.disabled = true
+  btn.innerHTML = '<span class="spinner"></span> Gerando...'
+  bar.classList.add('visible')
+  prev.classList.remove('visible')
+  acts.style.display = 'none'
+  cc.textContent = ''
+
+  try {
+    const r = await fetch(`${API}/generate`, { method: 'POST' })
+    const data = await r.json()
+    
+    if (data.post) {
+      currentPostId = data.post.id
+      const content = data.post.content
+      prev.textContent = content
+      prev.classList.add('visible')
+      
+      const n = content.length
+      cc.textContent = `${n} / 160 caracteres · Categoria: ${data.category?.label || ''}`
+      cc.className = 'char-count' + (n > 160 ? ' over' : n > 140 ? ' warn' : '')
+      
+      acts.style.display = 'flex'
+      toast('✅ Post gerado com sucesso!', 'success')
+    } else {
+      toast('Erro ao gerar post', 'error')
+    }
+  } catch(e) {
+    toast('Erro: servidor offline?', 'error')
+  } finally {
+    bar.classList.remove('visible')
+    btn.disabled = false
+    btn.innerHTML = '✦ Gerar com IA'
+  }
+}
+
+async function sendGeneratedPost() {
+  if (!currentPostId) return
+  const btn = document.getElementById('btn-send-post')
+  btn.disabled = true
+  btn.innerHTML = '<span class="spinner"></span> Enviando...'
+  
+  try {
+    const r = await fetch(`${API}/send/${currentPostId}`, { method: 'POST' })
+    const data = await r.json()
+    toast(`✅ Enviado! ${data.resumo?.ok || 0} mensagens entregues`, 'success')
+    clearPost()
+  } catch(e) {
+    toast('Erro ao enviar', 'error')
+  } finally {
+    btn.disabled = false
+    btn.innerHTML = '📱 Enviar para todos via WhatsApp'
+  }
+}
+
+async function quickSend() {
+  if (!confirm('Gerar um post e enviar para todos os contatos agora?')) return
+  try {
+    toast('🚀 Gerando e enviando...', 'success')
+    const r = await fetch(`${API}/send`, { method: 'POST' })
+    const data = await r.json()
+    toast(`✅ ${data.resumo?.ok || 0} mensagens enviadas!`, 'success')
+    loadDashboard()
+  } catch(e) {
+    toast('Erro ao enviar', 'error')
+  }
+}
+
+async function sendPost(postId) {
+  try {
+    const r = await fetch(`${API}/send/${postId}`, { method: 'POST' })
+    const data = await r.json()
+    toast(`✅ Enviado! ${data.resumo?.ok || 0} entregues`, 'success')
+    loadDashboard()
+  } catch(e) {
+    toast('Erro ao enviar', 'error')
+  }
+}
+
+function clearPost() {
+  document.getElementById('post-preview').classList.remove('visible')
+  document.getElementById('post-actions').style.display = 'none'
+  document.getElementById('char-count').textContent = ''
+  currentPostId = null
+}
+
+// ── CONTATOS ────────────────────────────────────────────────
+async function loadContacts() {
+  const tbody = document.getElementById('contacts-tbody')
+  tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><span class="emoji">⏳</span>Carregando...</div></td></tr>'
+  
+  try {
+    const data = await fetch(`${API}/contacts`).then(r => r.json())
+    const contacts = data.contacts || []
+    
+    document.getElementById('contacts-count').textContent = `${contacts.length} contatos ativos`
+    
+    if (!contacts.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><span class="emoji">👥</span>Nenhum contato cadastrado ainda</div></td></tr>'
+      return
+    }
+    
+    tbody.innerHTML = contacts.map(c => `
+      <tr>
+        <td style="font-weight:500">${c.name}</td>
+        <td style="font-family:var(--font-mono);font-size:12px">${c.phone}</td>
+        <td><span class="badge badge-green">ativo</span></td>
+        <td><span class="badge badge-gray">${c.source || 'manual'}</span></td>
+        <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${formatDate(c.created_at)}</td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="removeContact('${encodeURIComponent(c.phone)}', '${c.name}')">opt-out</button>
+        </td>
+      </tr>
+    `).join('')
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><span class="emoji">❌</span>Erro ao carregar. Servidor online?</div></td></tr>'
+  }
+}
+
+function openAddModal() {
+  document.getElementById('modal-name').value = ''
+  document.getElementById('modal-phone').value = ''
+  document.getElementById('modal-source').value = 'manual'
+  document.getElementById('modal-alert').className = 'alert'
+  document.getElementById('add-modal').classList.add('visible')
+}
+
+function closeModal() {
+  document.getElementById('add-modal').classList.remove('visible')
+}
+
+async function saveContact() {
+  const name = document.getElementById('modal-name').value.trim()
+  const phone = document.getElementById('modal-phone').value.trim()
+  const source = document.getElementById('modal-source').value
+  const alert = document.getElementById('modal-alert')
+  const btn = document.getElementById('modal-save-btn')
+
+  if (!name || !phone) {
+    alert.textContent = 'Preencha nome e telefone'
+    alert.className = 'alert alert-error visible'
+    return
+  }
+
+  btn.disabled = true
+  btn.innerHTML = '<span class="spinner"></span> Salvando...'
+
+  try {
+    const r = await fetch(`${API}/contacts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, source })
+    })
+    const data = await r.json()
+    
+    if (r.ok) {
+      closeModal()
+      toast(`✅ ${name} adicionado!`, 'success')
+      loadContacts()
+    } else {
+      alert.textContent = data.error || 'Erro ao salvar'
+      alert.className = 'alert alert-error visible'
+    }
+  } catch(e) {
+    alert.textContent = 'Erro de conexão com o servidor'
+    alert.className = 'alert alert-error visible'
+  } finally {
+    btn.disabled = false
+    btn.innerHTML = 'Salvar contato'
+  }
+}
+
+async function removeContact(phone, name) {
+  if (!confirm(`Marcar ${name} como opt-out? Ele não receberá mais mensagens.`)) return
+  try {
+    await fetch(`${API}/contacts/${phone}`, { method: 'DELETE' })
+    toast(`${name} marcado como opt-out`, 'success')
+    loadContacts()
+  } catch(e) {
+    toast('Erro ao remover contato', 'error')
+  }
+}
+
+// ── CAMPANHAS ────────────────────────────────────────────────
+async function loadCampaigns() {
+  const list = document.getElementById('campaigns-list')
+  list.innerHTML = '<div class="empty-state"><span class="emoji">⏳</span>Carregando...</div>'
+  
+  try {
+    const campaigns = await fetch(`${API}/campaigns`).then(r => r.json())
+    
+    if (!campaigns.length) {
+      list.innerHTML = '<div class="empty-state"><span class="emoji">📭</span>Nenhuma campanha enviada ainda</div>'
+      return
+    }
+    
+    list.innerHTML = campaigns.map(c => `
+      <div class="campaign-card">
+        <div>
+          <div class="campaign-title">${c.generated_posts?.categories?.emoji || '📝'} ${c.generated_posts?.source_title || 'Campanha'}</div>
+          <div class="campaign-meta">${c.generated_posts?.categories?.label || ''} · ${formatDate(c.started_at)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;font-family:var(--font-mono)">${c.generated_posts?.content?.slice(0,80) || ''}...</div>
+        </div>
+        <div class="campaign-stats">
+          <div class="camp-stat"><div class="camp-stat-val">${c.total_sent || 0}</div><div class="camp-stat-lbl">Total</div></div>
+          <div class="camp-stat"><div class="camp-stat-val" style="color:var(--accent)">${c.total_ok || 0}</div><div class="camp-stat-lbl">Ok</div></div>
+          <div class="camp-stat"><div class="camp-stat-val" style="color:var(--danger)">${c.total_fail || 0}</div><div class="camp-stat-lbl">Falha</div></div>
+        </div>
+      </div>
+    `).join('')
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state"><span class="emoji">❌</span>Erro ao carregar campanhas</div>'
+  }
+}
+
+// ── UTILITÁRIOS ──────────────────────────────────────────────
+function formatDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
+}
+
+function statusBadge(status) {
+  const map = { sent: 'badge-green', draft: 'badge-yellow', archived: 'badge-gray', approved: 'badge-blue' }
+  return map[status] || 'badge-gray'
+}
+
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.className = 'show ' + type
+  setTimeout(() => el.className = '', 3000)
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+checkServer()
+setInterval(checkServer, 30000)
+
+// Fechar modal ao clicar fora
+document.getElementById('add-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal()
+})
+</script>
+</body>
+</html>
