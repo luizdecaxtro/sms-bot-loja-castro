@@ -22,8 +22,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 app.use(express.static(__dirname))
 
 // ── Middleware de autenticação simples ────────────────────────
-// Em produção substitua por JWT ou chave de API real
 app.use((req, res, next) => {
+  // Rotas públicas — sem autenticação
+  if (req.path.startsWith('/webhook/')) return next()
+
   const key = req.headers['x-api-key']
   if (process.env.NODE_ENV === 'production' && key !== process.env.API_SECRET) {
     return res.status(401).json({ error: 'Não autorizado' })
@@ -154,20 +156,32 @@ app.get('/campaigns', async (_, res) => {
   }
 })
 
-/** POST /webhook/twilio — atualiza status de entrega (webhook Twilio) */
-app.post('/webhook/twilio', express.urlencoded({ extended: false }), async (req, res) => {
-  const { MessageSid, MessageStatus, To } = req.body
+/** POST /webhook/zapi — recebe mensagens WhatsApp (webhook Z-API) */
+app.post('/webhook/zapi', async (req, res) => {
+  try {
+    const body = req.body
 
-  if (MessageSid && MessageStatus) {
-    await supabase
-      .from('sms_sends')
-      .update({ status: MessageStatus })
-      .eq('provider_msg_id', MessageSid)
+    // Ignora mensagens enviadas pelo próprio bot
+    if (body.fromMe) return res.status(200).send()
 
-    console.log(`🔔 Webhook Twilio: ${To} → ${MessageStatus}`)
+    const phone   = body.phone || body.from
+    const message = body.text?.message || body.message || ''
+
+    console.log(`📩 Mensagem recebida de ${phone}: "${message}"`)
+
+    // Opt-out automático
+    const lower = message.toLowerCase().trim()
+    if (['sair', 'parar', 'stop', 'cancelar', 'descadastrar'].includes(lower)) {
+      await optOutContact(phone)
+      console.log(`🚫 Opt-out registrado para ${phone}`)
+      return res.status(200).send()
+    }
+
+  } catch (err) {
+    console.error('❌ Erro no webhook Z-API:', err.message)
   }
 
-  res.status(204).send()
+  res.status(200).send()
 })
 
 // ─────────────────────────────────────────────────────────────
@@ -204,6 +218,6 @@ Endpoints disponíveis:
   POST /generate
   POST /send            POST /send/:postId
   GET  /campaigns
-  POST /webhook/twilio
+  POST /webhook/zapi
   `)
 })
