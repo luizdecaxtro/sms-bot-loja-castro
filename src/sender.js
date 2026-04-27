@@ -1,4 +1,4 @@
-// src/sender.js — envia mensagens WhatsApp via Z-API
+// src/sender.js — envia mensagens WhatsApp via Whapi.Cloud
 import {
   getActiveContacts,
   logSmsSend,
@@ -8,29 +8,22 @@ import {
 
 async function sendOne({ phone, content }) {
   try {
-
-
-const ZAPI_URL = 'https://api.z-api.io/instances/3F2318D4494451BF5F185E89C7AD0B90/token/3919C0A6923A35552441D2B8/send-text'  
-
-console.log('URL:', ZAPI_URL)  
-
-const response = await fetch(ZAPI_URL, {
-  method: 'POST',
-  
-headers: { 
-  'Content-Type': 'application/json',
-  'Client-Token': process.env.ZAPI_CLIENT_TOKEN
-},
-
-  body: JSON.stringify({
-    phone: phone.replace('+', ''),
-    message: content
-  })
-})
+    const response = await fetch(`${process.env.WHAPI_URL}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.WHAPI_TOKEN}`
+      },
+      body: JSON.stringify({
+        to: phone.replace('+', '') + '@s.whatsapp.net',
+        body: content
+      })
+    })
 
     const data = await response.json()
-    if (data.zaapId || data.messageId || response.ok) {
-      return { ok: true, msgId: data.zaapId || data.messageId || 'sent' }
+
+    if (data.sent || data.id || response.ok) {
+      return { ok: true, msgId: data.id || 'sent' }
     } else {
       return { ok: false, error: JSON.stringify(data) }
     }
@@ -40,7 +33,7 @@ headers: {
 }
 
 export async function sendCampaign(post) {
-  console.log(`\n📱 Iniciando campanha WhatsApp Z-API: "${post.source_title}"`)
+  console.log(`\n📱 Iniciando campanha WhatsApp Whapi.Cloud: "${post.source_title}"`)
   const contacts = await getActiveContacts()
   console.log(`👥 ${contacts.length} contatos ativos encontrados`)
 
@@ -53,7 +46,7 @@ export async function sendCampaign(post) {
       postId:        post.id,
       contactId:     contact.id,
       phone:         contact.phone,
-      provider:      'zapi-whatsapp',
+      provider:      'whapi-whatsapp',
       providerMsgId: result.msgId,
       status:        result.ok ? 'sent' : 'failed',
       errorMessage:  result.error
