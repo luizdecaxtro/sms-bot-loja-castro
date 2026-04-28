@@ -11,7 +11,7 @@ const HEADERS = {
 
 /** Faz GET e retorna um objeto cheerio carregado */
 async function fetchPage(url) {
-  const { data } = await axios.get(url, { headers: HEADERS, timeout: 15000 })
+  const { data } = await axios.get(url, { headers: HEADERS, timeout: 5000 })
   return cheerio.load(data)
 }
 
