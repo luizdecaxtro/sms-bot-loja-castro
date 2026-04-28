@@ -24,7 +24,7 @@ app.use(express.static(__dirname))
 // ── Middleware de autenticação simples ────────────────────────
 app.use((req, res, next) => {
   // Rotas públicas — sem autenticação
-  if (req.path.startsWith('/webhook/')) return next()
+  if (req.path.startsWith('/webhook/') || req.path === '/health') return next()
 
   const key = req.headers['x-api-key']
   if (process.env.NODE_ENV === 'production' && key !== process.env.API_SECRET) {
