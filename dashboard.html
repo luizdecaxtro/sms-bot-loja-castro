@@ -33,7 +33,6 @@
     grid-template-columns: 220px 1fr;
   }
 
-  /* ── SIDEBAR ── */
   aside {
     background: var(--surface);
     border-right: 1px solid var(--border);
@@ -93,7 +92,6 @@
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   .status-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
 
-  /* ── MAIN ── */
   main {
     padding: 32px 36px;
     overflow-y: auto;
@@ -116,7 +114,6 @@
   h1 span { color: var(--accent); }
   .page-sub { font-size: 13px; color: var(--muted); margin-top: 4px; font-family: var(--font-mono); }
 
-  /* ── CARDS DE STAT ── */
   .stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -136,7 +133,6 @@
   .stat-value.blue { color: var(--accent3); }
   .stat-sub { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
 
-  /* ── BOTÕES ── */
   .btn {
     font-family: var(--font-head);
     font-weight: 700;
@@ -161,7 +157,6 @@
   .btn-send { background: rgba(96,200,240,.15); color: var(--accent3); border: 1px solid rgba(96,200,240,.3); }
   .btn-send:hover { background: rgba(96,200,240,.25); }
 
-  /* ── TABELAS ── */
   .table-wrap {
     background: var(--card);
     border: 1px solid var(--border);
@@ -184,7 +179,6 @@
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: rgba(255,255,255,.02); }
 
-  /* ── BADGES ── */
   .badge {
     font-family: var(--font-mono);
     font-size: 10px;
@@ -200,7 +194,6 @@
   .badge-red    { background: rgba(240,96,96,.15);  color: var(--danger); }
   .badge-gray   { background: rgba(122,125,112,.15); color: var(--muted); }
 
-  /* ── GERADOR DE POST ── */
   .gen-panel {
     background: var(--card);
     border: 1px solid var(--border);
@@ -277,7 +270,6 @@
     100% { transform: translateX(430%); }
   }
 
-  /* ── CONTATOS ── */
   .contacts-header {
     display: flex;
     gap: 10px;
@@ -298,7 +290,6 @@
   .input-field:focus { border-color: var(--accent); }
   .input-field::placeholder { color: var(--muted); }
 
-  /* ── CAMPAIGNS ── */
   .campaign-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -328,7 +319,6 @@
     margin-top: 24px;
   }
 
-  /* ── TOAST ── */
   #toast {
     position: fixed;
     bottom: 24px;
@@ -349,9 +339,53 @@
   #toast.show { transform: translateY(0); opacity: 1; }
   #toast.success { border-left: 3px solid var(--accent); }
   #toast.error   { border-left: 3px solid var(--danger); }
+
+  /* Modal de configuração */
+  #server-config {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(14,15,12,.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+  }
+  .config-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    width: 480px;
+  }
+  .config-title {
+    font-family: var(--font-head);
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+  .config-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
 </style>
 </head>
 <body>
+
+<!-- Modal de configuração do servidor -->
+<div id="server-config">
+  <div class="config-box">
+    <div class="config-title">⚠ Configure o servidor</div>
+    <div class="config-sub">Configure o endereço do servidor para conectar ao backend:</div>
+    <input id="cfg-url" class="input-field" style="width:100%;margin-bottom:10px"
+      placeholder="https://sms-bot-loja-castro-production.up.railway.app">
+    <input id="cfg-key" class="input-field" style="width:100%;margin-bottom:20px"
+      placeholder="API Secret (x-api-key)">
+    <button class="btn btn-primary" style="width:100%" onclick="saveServerConfig()">CONECTAR</button>
+  </div>
+</div>
 
 <aside>
   <div class="logo">
@@ -374,78 +408,59 @@
   </nav>
   <div class="sidebar-bottom">
     <span class="status-dot"></span>
-    <span class="status-label">Bot ativo · cron 9h</span>
+    <span class="status-label">Verificando...</span>
   </div>
 </aside>
 
 <main>
 
-  <!-- ── DASHBOARD ── -->
+  <!-- DASHBOARD -->
   <div id="page-dashboard" class="page active">
     <div class="page-header">
       <div>
         <h1>Dashboard <span>↗</span></h1>
-        <div class="page-sub">Visão geral das campanhas SMS</div>
+        <div class="page-sub">Visão geral das campanhas WhatsApp</div>
       </div>
-      <button class="btn btn-primary" onclick="showPage('generate', document.querySelector('nav a:nth-child(2)'))">
-        ✦ Novo post
+      <button class="btn btn-primary" id="btn-send-now" onclick="sendNow()">
+        🚀 ENVIAR AGORA
       </button>
     </div>
 
     <div class="stats">
       <div class="stat">
-        <div class="stat-label">SMS enviados hoje</div>
-        <div class="stat-value green">47</div>
-        <div class="stat-sub">↑ +12 vs ontem</div>
-      </div>
-      <div class="stat">
         <div class="stat-label">Contatos ativos</div>
-        <div class="stat-value yellow" id="dash-contacts">—</div>
+        <div class="stat-value green" id="dash-contacts">—</div>
         <div class="stat-sub">Banco Supabase</div>
       </div>
       <div class="stat">
         <div class="stat-label">Posts gerados</div>
-        <div class="stat-value blue" id="dash-posts">—</div>
+        <div class="stat-value yellow" id="dash-posts">—</div>
         <div class="stat-sub">Histórico total</div>
       </div>
       <div class="stat">
-        <div class="stat-label">Taxa de entrega</div>
-        <div class="stat-value green">98%</div>
-        <div class="stat-sub">Média histórica</div>
+        <div class="stat-label">Campanhas</div>
+        <div class="stat-value blue" id="dash-campaigns-count">—</div>
+        <div class="stat-sub">Total enviadas</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Próximo envio</div>
+        <div class="stat-value green" style="font-size:18px">Seg/Qua/Sex</div>
+        <div class="stat-sub">Às 9h automático</div>
       </div>
     </div>
 
-    <div class="section-title">Últimas campanhas</div>
-    <div id="dash-campaigns">
-      <div class="campaign-card">
-        <div>
-          <div class="campaign-title">📚 O Poder da Disciplina — Livro</div>
-          <div class="campaign-meta">Enviado hoje às 09:00 · seg, qua, sex</div>
-        </div>
-        <div class="campaign-stats">
-          <div class="camp-stat"><div class="camp-stat-val green">45</div><div class="camp-stat-lbl">Entregues</div></div>
-          <div class="camp-stat"><div class="camp-stat-val" style="color:var(--danger)">2</div><div class="camp-stat-lbl">Falhas</div></div>
-        </div>
-      </div>
-      <div class="campaign-card">
-        <div>
-          <div class="campaign-title">🎯 Mentoria Liderança — Mentoria</div>
-          <div class="campaign-meta">Enviado ontem às 09:00</div>
-        </div>
-        <div class="campaign-stats">
-          <div class="camp-stat"><div class="camp-stat-val green">47</div><div class="camp-stat-lbl">Entregues</div></div>
-          <div class="camp-stat"><div class="camp-stat-val" style="color:var(--danger)">0</div><div class="camp-stat-lbl">Falhas</div></div>
-        </div>
-      </div>
+    <div class="section-title">Últimos posts gerados</div>
+    <div id="dash-posts-list">
+      <div style="text-align:center;padding:32px;font-family:var(--font-mono);font-size:12px;color:var(--muted)">Carregando...</div>
     </div>
   </div>
 
-  <!-- ── GERAR POST ── -->
+  <!-- GERAR POST -->
   <div id="page-generate" class="page">
     <div class="page-header">
       <div>
         <h1>Gerar <span>Post</span></h1>
-        <div class="page-sub">IA analisa o site e cria o SMS ideal por categoria</div>
+        <div class="page-sub">IA analisa o site e cria a mensagem ideal por categoria</div>
       </div>
     </div>
 
@@ -496,13 +511,13 @@
       <div class="char-count" id="char-count"></div>
     </div>
 
-    <div id="post-actions" style="display:none;gap:10px;display:none">
-      <button class="btn btn-send" id="btn-send" onclick="sendPost()">◈ Enviar SMS para todos</button>
+    <div id="post-actions" style="display:none;gap:10px">
+      <button class="btn btn-send" id="btn-send-post" onclick="sendPost()">◈ Enviar para todos</button>
       <button class="btn btn-ghost" onclick="generatePost()">↺ Regenerar</button>
     </div>
   </div>
 
-  <!-- ── CONTATOS ── -->
+  <!-- CONTATOS -->
   <div id="page-contacts" class="page">
     <div class="page-header">
       <div>
@@ -513,7 +528,7 @@
 
     <div class="contacts-header">
       <input class="input-field" id="inp-name"  placeholder="Nome completo" style="flex:1">
-      <input class="input-field" id="inp-phone" placeholder="+5521999990001" style="flex:1">
+      <input class="input-field" id="inp-phone" placeholder="+5598999999999" style="flex:1">
       <button class="btn btn-primary" onclick="addContact()">+ Adicionar</button>
     </div>
 
@@ -530,13 +545,13 @@
           </tr>
         </thead>
         <tbody id="contacts-tbody">
-          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px;font-family:var(--font-mono);font-size:12px">Conecte a API para carregar contatos</td></tr>
+          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px;font-family:var(--font-mono);font-size:12px">Carregando...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- ── CAMPANHAS ── -->
+  <!-- CAMPANHAS -->
   <div id="page-campaigns" class="page">
     <div class="page-header">
       <div>
@@ -545,28 +560,7 @@
       </div>
     </div>
     <div id="campaigns-list">
-      <div class="campaign-card">
-        <div>
-          <div class="campaign-title">📚 O Poder da Disciplina</div>
-          <div class="campaign-meta">Livro · 24 Abr 2026 09:00 · ID: post_001</div>
-        </div>
-        <div class="campaign-stats">
-          <div class="camp-stat"><div class="camp-stat-val">47</div><div class="camp-stat-lbl">Total</div></div>
-          <div class="camp-stat"><div class="camp-stat-val green">45</div><div class="camp-stat-lbl">Ok</div></div>
-          <div class="camp-stat"><div class="camp-stat-val" style="color:var(--danger)">2</div><div class="camp-stat-lbl">Falha</div></div>
-        </div>
-      </div>
-      <div class="campaign-card">
-        <div>
-          <div class="campaign-title">🎯 Mentoria Liderança Transformacional</div>
-          <div class="campaign-meta">Mentoria · 23 Abr 2026 09:00 · ID: post_002</div>
-        </div>
-        <div class="campaign-stats">
-          <div class="camp-stat"><div class="camp-stat-val">47</div><div class="camp-stat-lbl">Total</div></div>
-          <div class="camp-stat"><div class="camp-stat-val green">47</div><div class="camp-stat-lbl">Ok</div></div>
-          <div class="camp-stat"><div class="camp-stat-val" style="color:var(--danger)">0</div><div class="camp-stat-lbl">Falha</div></div>
-        </div>
-      </div>
+      <div style="text-align:center;padding:32px;font-family:var(--font-mono);font-size:12px;color:var(--muted)">Carregando...</div>
     </div>
   </div>
 
@@ -576,11 +570,37 @@
 
 <script>
 // ── CONFIGURAÇÃO ─────────────────────────────────────────────
-// Troque pela URL real do seu servidor backend
-const API = 'http://localhost:3000'
-const API_KEY = ''  // sua x-api-key se NODE_ENV=production
+let API = ''
+let API_KEY = ''
 
-const headers = { 'Content-Type': 'application/json', 'x-api-key': API_KEY }
+function getHeaders() {
+  return { 'Content-Type': 'application/json', 'x-api-key': API_KEY }
+}
+
+// ── CONFIGURAÇÃO DO SERVIDOR ─────────────────────────────────
+function checkServerConfig() {
+  const saved = localStorage.getItem('api_url')
+  if (saved) {
+    API = saved
+    API_KEY = localStorage.getItem('api_key') || ''
+    document.getElementById('cfg-url').value = API
+    document.getElementById('cfg-key').value = API_KEY
+    document.getElementById('server-config').style.display = 'none'
+    initDashboard()
+  }
+}
+
+function saveServerConfig() {
+  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/, '')
+  const key = document.getElementById('cfg-key').value.trim()
+  if (!url) { toast('Informe a URL do servidor', 'error'); return }
+  localStorage.setItem('api_url', url)
+  localStorage.setItem('api_key', key)
+  API = url
+  API_KEY = key
+  document.getElementById('server-config').style.display = 'none'
+  initDashboard()
+}
 
 // ── NAVEGAÇÃO ────────────────────────────────────────────────
 function showPage(name, link) {
@@ -588,7 +608,98 @@ function showPage(name, link) {
   document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'))
   document.getElementById('page-' + name).classList.add('active')
   if (link) link.classList.add('active')
-  if (name === 'contacts') loadContacts()
+  if (name === 'contacts')  loadContacts()
+  if (name === 'campaigns') loadCampaigns()
+  if (name === 'dashboard') loadDashboard()
+  return false
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const [contactsRes, postsRes, campaignsRes] = await Promise.all([
+      fetch(`${API}/contacts`,  { headers: getHeaders() }),
+      fetch(`${API}/posts`,     { headers: getHeaders() }),
+      fetch(`${API}/campaigns`, { headers: getHeaders() }),
+    ])
+
+    const contacts  = await contactsRes.json()
+    const posts     = await postsRes.json()
+    const campaigns = await campaignsRes.json()
+
+    document.getElementById('dash-contacts').textContent = contacts.total || 0
+    document.getElementById('dash-posts').textContent = Array.isArray(posts) ? posts.length : 0
+    document.getElementById('dash-campaigns-count').textContent = Array.isArray(campaigns) ? campaigns.length : 0
+
+    const postsList = document.getElementById('dash-posts-list')
+    if (Array.isArray(posts) && posts.length > 0) {
+      postsList.innerHTML = posts.slice(0, 5).map(p => `
+        <div class="campaign-card">
+          <div>
+            <div class="campaign-title">
+              ${p.categories?.emoji || ''} ${p.categories?.label || ''} · ${p.source_title || ''}
+            </div>
+            <div class="campaign-meta">
+              ${new Date(p.created_at).toLocaleString('pt-BR')} ·
+              <span class="badge ${p.status === 'sent' ? 'badge-green' : 'badge-yellow'}">${p.status}</span>
+            </div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:6px">
+              ${(p.content || '').slice(0, 100)}...
+            </div>
+          </div>
+          ${p.status !== 'sent' ? `
+          <div>
+            <button class="btn btn-send" onclick="sendDraft('${p.id}')">◈ Enviar</button>
+          </div>` : ''}
+        </div>
+      `).join('')
+    } else {
+      postsList.innerHTML = '<div style="text-align:center;padding:32px;font-family:var(--font-mono);font-size:12px;color:var(--muted)">Nenhum post ainda</div>'
+    }
+
+  } catch (err) {
+    console.error('Erro ao carregar dashboard:', err)
+    toast('Erro ao conectar ao servidor', 'error')
+  }
+}
+
+// ── ENVIAR AGORA ─────────────────────────────────────────────
+async function sendNow() {
+  if (!confirm('Enviar campanha para todos os contatos agora?')) return
+  const btn = document.getElementById('btn-send-now')
+  btn.disabled = true
+  btn.textContent = '⏳ Gerando e enviando...'
+
+  try {
+    const res  = await fetch(`${API}/send`, { method: 'POST', headers: getHeaders() })
+    const data = await res.json()
+    if (res.ok) {
+      toast(`✅ Campanha enviada! OK: ${data.resumo?.ok}, Falhas: ${data.resumo?.fail}`, 'success')
+      loadDashboard()
+    } else {
+      toast('Erro: ' + (data.error || 'Falha no envio'), 'error')
+    }
+  } catch (err) {
+    toast('Erro ao enviar: ' + err.message, 'error')
+  } finally {
+    btn.disabled = false
+    btn.innerHTML = '🚀 ENVIAR AGORA'
+  }
+}
+
+async function sendDraft(postId) {
+  try {
+    const res  = await fetch(`${API}/send/${postId}`, { method: 'POST', headers: getHeaders() })
+    const data = await res.json()
+    if (res.ok) {
+      toast(`✅ Enviado! OK: ${data.resumo?.ok}`, 'success')
+      loadDashboard()
+    } else {
+      toast('Erro: ' + data.error, 'error')
+    }
+  } catch (err) {
+    toast('Erro: ' + err.message, 'error')
+  }
 }
 
 // ── GERADOR ─────────────────────────────────────────────────
@@ -602,7 +713,7 @@ function selectCat(el, slug) {
 }
 
 async function generatePost() {
-  const btn = document.getElementById('btn-gen')
+  const btn  = document.getElementById('btn-gen')
   const bar  = document.getElementById('loading-bar')
   const prev = document.getElementById('post-preview')
   const acts = document.getElementById('post-actions')
@@ -614,49 +725,50 @@ async function generatePost() {
   acts.style.display = 'none'
   cc.textContent = ''
 
-  // Simula geração local (substitua pelo fetch real ao backend)
-  await new Promise(r => setTimeout(r, 2000))
+  try {
+    const res  = await fetch(`${API}/generate`, { method: 'POST', headers: getHeaders() })
+    const data = await res.json()
 
-  const samples = {
-    '':        ['📚 Você já leu o livro que pode mudar sua vida? Confira nossa curadoria especial em lojasdecastro.com.br', '🎯 Mentoria exclusiva com vagas limitadas. Transforme seus resultados agora: lojasdecastro.com.br/mentoria', '🎉 Evento GRATUITO essa semana! Reserve sua vaga: lojasdecastro.com.br/eventos'],
-    'livro':   ['📚 Descubra o livro que nossos membros mais recomendam em 2026. Acesse agora: lojasdecastro.com.br/livros'],
-    'mentoria':['🎯 Acelere seus resultados com mentoria individual. Vagas abertas — inscreva-se: lojasdecastro.com.br/mentoria'],
-    'membros': ['👥 Conteúdo exclusivo, comunidade ativa e muito mais. Conheça a Área de Membros: lojasdecastro.com.br/membros'],
-    'evento':  ['🎉 Evento gratuito ao vivo essa semana. Participe e aprenda com especialistas: lojasdecastro.com.br/eventos'],
-    'artigo':  ['📝 Novo artigo publicado: leia gratuitamente e leve um aprendizado para hoje. lojasdecastro.com.br/blog'],
-    'curso':   ['🎓 Aprenda no seu ritmo com nossos cursos certificados. Comece hoje: lojasdecastro.com.br/cursos']
+    if (!res.ok) throw new Error(data.error || 'Erro ao gerar')
+
+    const text = data.post?.content || ''
+    prev.textContent = text
+    prev.classList.add('visible')
+    currentPostId = data.post?.id
+
+    const n = text.length
+    cc.textContent = `${n} / 300 caracteres`
+    cc.className = 'char-count' + (n > 300 ? ' over' : n > 250 ? ' warn' : '')
+    acts.style.display = 'flex'
+
+  } catch (err) {
+    toast('Erro ao gerar post: ' + err.message, 'error')
+  } finally {
+    bar.classList.remove('visible')
+    btn.disabled = false
   }
-
-  const pool = samples[selectedCat] || samples['']
-  const text = pool[Math.floor(Math.random() * pool.length)]
-
-  prev.textContent = text
-  prev.classList.add('visible')
-
-  const n = text.length
-  cc.textContent = `${n} / 160 caracteres`
-  cc.className = 'char-count' + (n > 160 ? ' over' : n > 140 ? ' warn' : '')
-
-  acts.style.display = 'flex'
-  bar.classList.remove('visible')
-  btn.disabled = false
-
-  currentPostId = 'preview_' + Date.now()
 }
 
 async function sendPost() {
-  const btn  = document.getElementById('btn-send')
-  const text = document.getElementById('post-preview').textContent
-  if (!text) return
-
+  if (!currentPostId) return
+  const btn = document.getElementById('btn-send-post')
   btn.disabled = true
   btn.textContent = '⏳ Enviando...'
 
-  await new Promise(r => setTimeout(r, 1800))
-
-  btn.disabled = false
-  btn.innerHTML = '◈ Enviar SMS para todos'
-  toast('✅ SMS enviado para todos os contatos ativos!', 'success')
+  try {
+    const res  = await fetch(`${API}/send/${currentPostId}`, { method: 'POST', headers: getHeaders() })
+    const data = await res.json()
+    if (res.ok) {
+      toast(`✅ Enviado! OK: ${data.resumo?.ok}, Falhas: ${data.resumo?.fail}`, 'success')
+    } else {
+      toast('Erro: ' + data.error, 'error')
+    }
+  } catch (err) {
+    toast('Erro: ' + err.message, 'error')
+  } finally {
+    btn.disabled = false
+    btn.innerHTML = '◈ Enviar para todos'
+  }
 }
 
 function clearPost() {
@@ -667,44 +779,106 @@ function clearPost() {
 }
 
 // ── CONTATOS ────────────────────────────────────────────────
-const mockContacts = [
-  { name: 'Ana Lima',      phone: '+5521999990001', status: 'active', source: 'site',   created_at: '2026-01-10' },
-  { name: 'Carlos Melo',   phone: '+5521999990002', status: 'active', source: 'evento', created_at: '2026-02-05' },
-  { name: 'Fernanda Costa',phone: '+5511988880003', status: 'active', source: 'manual', created_at: '2026-03-01' },
-  { name: 'Roberto Silva', phone: '+5521977770004', status: 'opted_out', source: 'site',created_at: '2025-12-20' },
-  { name: 'Juliana Paz',   phone: '+5531966660005', status: 'active', source: 'site',   created_at: '2026-04-10' },
-]
-
-function loadContacts() {
+async function loadContacts() {
   const tbody = document.getElementById('contacts-tbody')
-  tbody.innerHTML = mockContacts.map(c => `
-    <tr>
-      <td>${c.name}</td>
-      <td style="font-family:var(--font-mono);font-size:12px">${c.phone}</td>
-      <td><span class="badge ${c.status === 'active' ? 'badge-green' : 'badge-red'}">${c.status}</span></td>
-      <td><span class="badge badge-gray">${c.source}</span></td>
-      <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${c.created_at}</td>
-      <td><button class="btn btn-danger" style="padding:4px 10px;font-size:10px" onclick="removeContact('${c.phone}')">opt-out</button></td>
-    </tr>
-  `).join('')
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;font-family:var(--font-mono);font-size:12px;color:var(--muted)">Carregando...</td></tr>'
+
+  try {
+    const res  = await fetch(`${API}/contacts`, { headers: getHeaders() })
+    const data = await res.json()
+    const contacts = data.contacts || []
+
+    if (contacts.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;font-family:var(--font-mono);font-size:12px;color:var(--muted)">Nenhum contato cadastrado</td></tr>'
+      return
+    }
+
+    tbody.innerHTML = contacts.map(c => `
+      <tr>
+        <td>${c.name}</td>
+        <td style="font-family:var(--font-mono);font-size:12px">${c.phone}</td>
+        <td><span class="badge badge-green">ativo</span></td>
+        <td><span class="badge badge-gray">${c.source || 'manual'}</span></td>
+        <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${new Date(c.created_at || Date.now()).toLocaleDateString('pt-BR')}</td>
+        <td><button class="btn btn-danger" style="padding:4px 10px;font-size:10px" onclick="removeContact('${c.phone}')">opt-out</button></td>
+      </tr>
+    `).join('')
+  } catch (err) {
+    toast('Erro ao carregar contatos', 'error')
+  }
 }
 
-function addContact() {
+async function addContact() {
   const name  = document.getElementById('inp-name').value.trim()
   const phone = document.getElementById('inp-phone').value.trim()
   if (!name || !phone) { toast('Preencha nome e telefone', 'error'); return }
-  mockContacts.unshift({ name, phone, status: 'active', source: 'manual', created_at: new Date().toISOString().slice(0,10) })
-  document.getElementById('inp-name').value = ''
-  document.getElementById('inp-phone').value = ''
-  loadContacts()
-  toast(`✅ ${name} adicionado!`, 'success')
+
+  try {
+    const res = await fetch(`${API}/contacts`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ name, phone, source: 'manual' })
+    })
+    const data = await res.json()
+    if (res.ok) {
+      document.getElementById('inp-name').value = ''
+      document.getElementById('inp-phone').value = ''
+      toast(`✅ ${name} adicionado!`, 'success')
+      loadContacts()
+    } else {
+      toast('Erro: ' + data.error, 'error')
+    }
+  } catch (err) {
+    toast('Erro ao adicionar contato', 'error')
+  }
 }
 
-function removeContact(phone) {
-  const c = mockContacts.find(x => x.phone === phone)
-  if (c) c.status = 'opted_out'
-  loadContacts()
-  toast('Contato marcado como opt-out', 'success')
+async function removeContact(phone) {
+  if (!confirm(`Remover ${phone} da lista?`)) return
+  try {
+    await fetch(`${API}/contacts/${encodeURIComponent(phone)}`, { method: 'DELETE', headers: getHeaders() })
+    toast('Contato removido', 'success')
+    loadContacts()
+  } catch (err) {
+    toast('Erro ao remover', 'error')
+  }
+}
+
+// ── CAMPANHAS ────────────────────────────────────────────────
+async function loadCampaigns() {
+  const list = document.getElementById('campaigns-list')
+  list.innerHTML = '<div style="text-align:center;padding:32px;font-family:var(--font-mono);font-size:12px;color:var(--muted)">Carregando...</div>'
+
+  try {
+    const res  = await fetch(`${API}/campaigns`, { headers: getHeaders() })
+    const data = await res.json()
+
+    if (!Array.isArray(data) || data.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:32px;font-family:var(--font-mono);font-size:12px;color:var(--muted)">Nenhuma campanha ainda</div>'
+      return
+    }
+
+    list.innerHTML = data.map(c => `
+      <div class="campaign-card">
+        <div>
+          <div class="campaign-title">
+            ${c.generated_posts?.categories?.emoji || ''} ${c.generated_posts?.source_title || 'Campanha'}
+          </div>
+          <div class="campaign-meta">
+            ${c.generated_posts?.categories?.label || ''} ·
+            ${new Date(c.started_at).toLocaleString('pt-BR')}
+          </div>
+        </div>
+        <div class="campaign-stats">
+          <div class="camp-stat"><div class="camp-stat-val">${c.total_sent || 0}</div><div class="camp-stat-lbl">Total</div></div>
+          <div class="camp-stat"><div class="camp-stat-val" style="color:var(--accent)">${c.total_ok || 0}</div><div class="camp-stat-lbl">Ok</div></div>
+          <div class="camp-stat"><div class="camp-stat-val" style="color:var(--danger)">${c.total_fail || 0}</div><div class="camp-stat-lbl">Falha</div></div>
+        </div>
+      </div>
+    `).join('')
+  } catch (err) {
+    toast('Erro ao carregar campanhas', 'error')
+  }
 }
 
 // ── TOAST ────────────────────────────────────────────────────
@@ -712,12 +886,33 @@ function toast(msg, type = 'success') {
   const el = document.getElementById('toast')
   el.textContent = msg
   el.className = 'show ' + type
-  setTimeout(() => el.className = '', 3000)
+  setTimeout(() => el.className = '', 4000)
+}
+
+// ── STATUS BAR ───────────────────────────────────────────────
+async function updateStatusBar() {
+  try {
+    const res = await fetch(`${API}/health`, { headers: getHeaders() })
+    if (res.ok) {
+      document.querySelector('.status-label').textContent = 'Bot ativo · online'
+      document.querySelector('.status-dot').style.background = 'var(--accent)'
+    } else {
+      throw new Error()
+    }
+  } catch {
+    document.querySelector('.status-label').textContent = 'Servidor offline'
+    document.querySelector('.status-dot').style.background = 'var(--danger)'
+  }
 }
 
 // ── INIT ─────────────────────────────────────────────────────
-document.getElementById('dash-contacts').textContent = mockContacts.filter(c=>c.status==='active').length
-document.getElementById('dash-posts').textContent = '18'
+async function initDashboard() {
+  await loadDashboard()
+  await updateStatusBar()
+}
+
+checkServerConfig()
 </script>
 </body>
 </html>
+
