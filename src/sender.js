@@ -1,4 +1,4 @@
-// src/sender.js — envia mensagens WhatsApp via Whapi.Cloud
+// src/sender.js — envia mensagens WhatsApp via Meta Cloud API
 import {
   getActiveContacts,
   logSmsSend,
@@ -6,34 +6,46 @@ import {
   upsertCampaign
 } from './db.js'
 
+const PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID
+const META_TOKEN = process.env.META_TOKEN
+
 async function sendOne({ phone, content }) {
   try {
-    const response = await fetch(`${process.env.WHAPI_URL}/messages/text`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.WHAPI_TOKEN}`
-      },
-      body: JSON.stringify({
-        to: phone.replace('+', '') + '@s.whatsapp.net',
-        body: content
-      })
-    })
+    // Remove o + e espaços do telefone
+    const to = phone.replace(/\D/g, '')
+
+    const response = await fetch(
+      `https://graph.facebook.com/v25.0/${PHONE_NUMBER_ID}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${META_TOKEN}`
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: to,
+          type: 'text',
+          text: { body: content }
+        })
+      }
+    )
 
     const data = await response.json()
 
-    if (data.sent || data.id || response.ok) {
-      return { ok: true, msgId: data.id || 'sent' }
+    if (data.messages?.[0]?.id) {
+      return { ok: true, msgId: data.messages[0].id }
     } else {
       return { ok: false, error: JSON.stringify(data) }
     }
+
   } catch (err) {
     return { ok: false, error: err.message }
   }
 }
 
 export async function sendCampaign(post) {
-  console.log(`\n📱 Iniciando campanha WhatsApp Whapi.Cloud: "${post.source_title}"`)
+  console.log(`\n📱 Iniciando campanha WhatsApp Meta API: "${post.source_title}"`)
   const contacts = await getActiveContacts()
   console.log(`👥 ${contacts.length} contatos ativos encontrados`)
 
@@ -46,7 +58,7 @@ export async function sendCampaign(post) {
       postId:        post.id,
       contactId:     contact.id,
       phone:         contact.phone,
-      provider:      'whapi-whatsapp',
+      provider:      'meta-whatsapp',
       providerMsgId: result.msgId,
       status:        result.ok ? 'sent' : 'failed',
       errorMessage:  result.error
@@ -60,7 +72,7 @@ export async function sendCampaign(post) {
       console.warn(`  ❌ ${contact.name} (${contact.phone}) — ${result.error}`)
     }
 
-    await new Promise(r => setTimeout(r, 500))
+    await new Promise(r => setTimeout(r, 1000))
   }
 
   await updatePostStatus(post.id, 'sent')
