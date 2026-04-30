@@ -1,4 +1,4 @@
-// src/sender.js — envia mensagens WhatsApp via Meta Cloud API
+// src/sender.js — envia mensagens WhatsApp via Whapi.Cloud
 import {
   getActiveContacts,
   logSmsSend,
@@ -6,35 +6,24 @@ import {
   upsertCampaign
 } from './db.js'
 
-const PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID
-const META_TOKEN = process.env.META_TOKEN
-
 async function sendOne({ phone, content }) {
   try {
-    // Remove o + e espaços do telefone
-    const to = phone.replace(/\D/g, '')
+    const baseUrl = process.env.WHAPI_URL.replace(/\/$/, '')
+    const to = phone.replace(/\D/g, '') + '@s.whatsapp.net'
 
-    const response = await fetch(
-      `https://graph.facebook.com/v25.0/${PHONE_NUMBER_ID}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${META_TOKEN}`
-        },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to: to,
-          type: 'text',
-          text: { body: content }
-        })
-      }
-    )
+    const response = await fetch(`${baseUrl}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.WHAPI_TOKEN}`
+      },
+      body: JSON.stringify({ to, body: content })
+    })
 
     const data = await response.json()
 
-    if (data.messages?.[0]?.id) {
-      return { ok: true, msgId: data.messages[0].id }
+    if (data.sent || data.id || response.ok) {
+      return { ok: true, msgId: data.id || 'sent' }
     } else {
       return { ok: false, error: JSON.stringify(data) }
     }
@@ -45,7 +34,7 @@ async function sendOne({ phone, content }) {
 }
 
 export async function sendCampaign(post) {
-  console.log(`\n📱 Iniciando campanha WhatsApp Meta API: "${post.source_title}"`)
+  console.log(`\n📱 Iniciando campanha WhatsApp Whapi: "${post.source_title}"`)
   const contacts = await getActiveContacts()
   console.log(`👥 ${contacts.length} contatos ativos encontrados`)
 
@@ -58,7 +47,7 @@ export async function sendCampaign(post) {
       postId:        post.id,
       contactId:     contact.id,
       phone:         contact.phone,
-      provider:      'meta-whatsapp',
+      provider:      'whapi-whatsapp',
       providerMsgId: result.msgId,
       status:        result.ok ? 'sent' : 'failed',
       errorMessage:  result.error
