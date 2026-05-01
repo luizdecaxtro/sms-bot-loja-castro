@@ -6,10 +6,14 @@ import {
   upsertCampaign
 } from './db.js'
 
+
 async function sendOne({ phone, content }) {
   try {
     const baseUrl = process.env.WHAPI_URL.replace(/\/$/, '')
     const to = phone.replace(/\D/g, '') + '@s.whatsapp.net'
+
+    console.log(`📤 Enviando para ${to}`)
+    console.log(`📤 URL: ${baseUrl}/messages/text`)
 
     const response = await fetch(`${baseUrl}/messages/text`, {
       method: 'POST',
@@ -21,6 +25,7 @@ async function sendOne({ phone, content }) {
     })
 
     const data = await response.json()
+    console.log(`📤 Resposta Whapi:`, JSON.stringify(data))
 
     if (data.sent || data.id || response.ok) {
       return { ok: true, msgId: data.id || 'sent' }
